@@ -1,0 +1,14 @@
+packages:
+  - packages/*
+
+# Versions shared by every plugin package. A package.json that declares
+# "catalog:" for one of these entries resolves to the version below, so a
+# single bump here updates the whole workspace after `pnpm install`.
+catalog:
+  '@deepseek-ai/cordis': ~4.1.0
+  '@deepseek-ai/schemastery': ~3.19.0
+
+# pnpm >=10 blocks dependency build scripts by default. esbuild (used by tsup)
+# needs its postinstall to place the platform binary.
+allowBuilds:
+  esbuild: true

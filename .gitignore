@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output (tsup writes dist/ in every plugin package)
+dist/
+
+# Logs and local editor state
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/
+pnpm-debug.log*
+
+# Packed tarballs
+*.tgz

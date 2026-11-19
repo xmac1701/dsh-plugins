@@ -1,0 +1,32 @@
+{
+  "name": "dsh-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A pnpm monorepo for DeepSeek Harness (DSH) plugins",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "new": "node scripts/create-plugin.mjs",
+    "build": "pnpm -r --if-present run build",
+    "dev": "pnpm -r --parallel --if-present run dev",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "check": "node scripts/check-bundles.mjs",
+    "verify": "pnpm typecheck && pnpm build && pnpm check",
+    "plugin:add": "node scripts/plugin.mjs add",
+    "plugin:remove": "node scripts/plugin.mjs remove",
+    "sync:versions": "node scripts/sync-dsh-version.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "tsup": "^9.0.0",
+    "typescript": "~5.9.3",
+    "yaml": "^2.9.1"
+  },
+  "dshPlugins": {
+    "dshRange": ">=0.2.2-rc.5 <0.3.0",
+    "cordisRange": "~4.1.0"
+  }
+}

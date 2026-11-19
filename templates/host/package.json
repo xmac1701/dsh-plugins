@@ -1,0 +1,41 @@
+{
+  "name": "__PACKAGE__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "__DESCRIPTION__",
+  "engines": {
+    "dsh": "__DSH_RANGE__"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "catalog:"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "__CORDIS_RANGE__"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "catalog:"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

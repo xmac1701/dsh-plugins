@@ -1,0 +1,9 @@
+# This patch is the bundle's configuration layer. The Loader applies it when
+# a profile lists this bundle, then user layers can override the same row id.
+- insert:
+    - id: __NAME__
+      name: '__PACKAGE__'
+      # Every key must be restated when a later layer overrides this row,
+      # because an override replaces the whole config object.
+      # config:
+      #   message: Hello from __PACKAGE__

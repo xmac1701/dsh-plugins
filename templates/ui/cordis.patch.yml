@@ -1,0 +1,5 @@
+# The bundle layer. This package's Host half is empty by default; the Client
+# half in src/client.ts draws the UI registered with `dsh.client`.
+- insert:
+    - id: __NAME__
+      name: '__PACKAGE__'
