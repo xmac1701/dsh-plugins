@@ -1,70 +1,72 @@
-# 快速模型选择器
+English | [简体中文](README.zh-CN.md)
 
-用两列面板同时选择「模型 + 推理等级」的 DSH Web UI 插件。它替换 composer 中原生模型选择器（composer 右下角的模型 chip），保留面板底部的智能体团队协作开关。
+# Fast Model Selector
 
-## 功能
+A DSH Web UI plugin that picks "model + reasoning effort" in a single two-column panel. It replaces the native model selector in the composer (the model chip at the composer's bottom right) while keeping the agent teamwork toggle at the bottom of the panel.
 
-- **两列面板**：左列按提供商分组显示模型，右列显示当前高亮模型对应的推理等级。
-- **一次点选**：悬停/聚焦/轻点模型只切换右侧列表；点击推理等级即提交完整的模型与推理等级，省去「先选模型、再选等级」的分步菜单。
-- **收藏**：面板顶部按「模型 + 推理等级」展示收藏条目，点击直接切换；推理列表 hover 时每行右侧显示五星按钮，金黄色表示已收藏。
-- **收藏持久化**：收藏通过 DSH settings Remote 写入 profile 的插件配置（`fast-model-selector` 的 `favorites` 字段），不依赖浏览器 localStorage；按设计不在 Settings 页面生成界面。
-- **延迟写入**：面板内的收藏/取消只改内存状态，等面板关闭（以及页面隐藏或组件卸载）时才统一写入 settings，避免每次收藏都触发 DSH 的 settings 事件导致模型列表刷新。
-- **菜单瞄准（menu-aim）**：鼠标从当前模型行斜向滑向推理列表时，途经的其他模型行不会抢走高亮；只有指针停下或改变方向约 200ms 后才切换，因此可以直接斜着滑进推理列，不需要先横移再竖移。
-- **当前选择可见**：当前模型和当前推理等级加粗，并在左侧显示对勾。
-- **对应关系清晰**：高亮模型行与推理等级 hover 使用同一底色；两列列表容器使用相同的透明背景，模型列表的常驻滚动条作为分栏线；模型行尾显示指向右列的 chevron；搜索框并入「模型」标题行（无边框、右对齐，平时 64px，聚焦后自动扩展），当前高亮的模型名并入「推理等级」标题行（右对齐、限宽、带下划线）。
-- **搜索**：模型总数超过 4 时，模型栏「模型」标题下出现搜索框，按模型名或提供商名过滤；↑/↓ 进入结果，Enter 跳到推理列，Escape 先清空搜索。
-- **性能**：首屏不为本插件加载模型目录；首次悬停、聚焦或打开 trigger 时才调用共享目录的幂等 `load()`。模型/提供商索引只在面板打开后构建；模型行是 memo 组件，推理档位只为当前高亮模型计算；屏外行使用 `content-visibility: auto`，提供商标题吸顶。
-- **自动同步**：读取 `ctx.modelDirectories` 的共享 store，设置页修改模型配置、凭据或默认模型后会随 catalog refresh 更新；通过 `/model` 命令切换也会同步到这里。保存的模型被移除时，trigger 显示「当前模型不可用」并在面板内提示重新选择。
-- **团队协作**：底部保留「启用智能体团队协作」开关，根会话可用；停用且本会话已使用过模型时会内联展开确认区。
+## Features
 
-## 安装
+- **Two-column panel**: the left column lists models grouped by provider; the right column shows the reasoning efforts for the currently highlighted model.
+- **Single click to choose**: hovering, focusing, or tapping a model only switches the right-hand list; clicking a reasoning effort commits the full model and reasoning effort, avoiding the step-by-step "pick a model, then pick an effort" menu.
+- **Favorites**: the top of the panel shows favorite entries as "model + reasoning effort", and clicking one switches directly. While hovering the reasoning list, a five-star button appears at the right of each row; gold means it is favorited.
+- **Favorite persistence**: favorites are written to the profile's plugin configuration (the `favorites` field of `fast-model-selector`) through the DSH settings Remote, not to browser localStorage; by design, no UI is generated on the Settings page.
+- **Deferred writes**: favoriting and unfavoriting inside the panel only change in-memory state. Settings are written all at once when the panel closes (and when the page is hidden or the component unmounts), so every favorite change does not fire a DSH settings event that refreshes the model list.
+- **Menu-aim**: when the mouse moves diagonally from the current model row toward the reasoning list, other model rows passed over do not steal the highlight. The switch happens only after the pointer stops or changes direction for about 200ms, so you can slide diagonally straight into the reasoning column instead of moving horizontally first and then vertically.
+- **Current selection visible**: the current model and current reasoning effort are bold, with a check mark on the left.
+- **Clear correspondence**: the highlighted model row and the reasoning effort hover share the same background color; both list containers use the same transparent background, and the model list's permanent scrollbar acts as the column divider; each model row ends with a chevron pointing to the right column; the search box is merged into the "Model" header row (borderless, right-aligned, 64px normally, auto-expanding on focus), and the currently highlighted model name is merged into the "Reasoning effort" header row (right-aligned, width-limited, underlined).
+- **Search**: when there are more than 4 models in total, a search box appears under the "Model" header in the model column, filtering by model name or provider name; ↑/↓ moves into the results, Enter jumps to the reasoning column, and Escape first clears the search.
+- **Performance**: the model catalog is not loaded for this plugin on first paint; the shared catalog's idempotent `load()` is called only on the first hover, focus, or trigger open. Model and provider indexes are built only after the panel opens; model rows are memo components, reasoning efforts are computed only for the currently highlighted model; off-screen rows use `content-visibility: auto`, and provider headers are sticky.
+- **Automatic sync**: reads the shared store of `ctx.modelDirectories` and updates with the catalog refresh after model configuration, credentials, or the default model is changed on the settings page; switching through the `/model` command also syncs here. When the saved model is removed, the trigger shows "Current model unavailable" and the panel prompts you to select again.
+- **Agent teamwork**: the "Enable agent teamwork" toggle is kept at the bottom and is available to the root session; when it is disabled and the session has already used a model, a confirmation area expands inline.
 
-在 DSH 的 **Plugins → Add plugin** 中选择本目录，或从插件市场安装后再启用：
+## Installation
+
+In DSH's **Plugins → Add plugin**, select this directory, or install it from the plugin marketplace and then enable it:
 
 ```sh
 pnpm install
 pnpm build
 ```
 
-本包会被安装到 profile 并以 bundle 形式启用。安装后刷新页面；禁用该 bundle 会恢复原生模型选择器。
+The package is installed into the profile and enabled as a bundle. Refresh the page after installation; disabling the bundle restores the native model selector.
 
-## 交互
+## Interaction
 
-- 打开面板时，当前模型与当前推理等级处于选中态。
-- 鼠标悬停或键盘聚焦某个模型时，右侧列表切换到该模型的档位。
-- 鼠标斜向移向推理列时，中间经过的模型行会被菜单瞄准忽略；停在某行或改变方向后才切换。
-- 收藏区域固定在面板顶部：没有收藏时显示提示，有收藏时横向排列条目；点击条目直接切换，条目右侧的 × 可移除。推理列表 hover 时所有星级按钮出现，点亮为金黄色表示已收藏。
-- 点击推理等级：切换模型和档位并关闭面板；若点击的就是当前组合，只关闭面板。
-- 模型没有推理档位元数据时，右列提供一条 `Default` 行，提交时不写入 `reasoningEffort`；trigger 与右列此时统一显示 Default。
-- 模型数超过 4 时，模型栏标题下的子标题行显示搜索框；匹配模型名或提供商名。
-- 键盘：模型列 ↑/↓/Home/End 移动，→/Enter 进入推理列；推理列 ↑/↓ 移动，← 回到模型列；Escape 关闭；Tab 在面板内循环。
+- When the panel opens, the current model and current reasoning effort are in the selected state.
+- Hovering a model or focusing it with the keyboard switches the right-hand list to that model's efforts.
+- When the mouse moves diagonally toward the reasoning column, menu-aim ignores the model rows passed over; the switch happens only after stopping on a row or changing direction.
+- The favorites area is pinned at the top of the panel: it shows a hint when there are no favorites, and lays entries out horizontally when there are some; clicking an entry switches directly, and the × on the right of an entry removes it. While hovering the reasoning list, all star buttons appear, and a lit gold star means favorited.
+- Clicking a reasoning effort switches the model and effort and closes the panel; if the clicked combination is the current one, only the panel closes.
+- When a model has no reasoning effort metadata, the right column provides a single `Default` row and no `reasoningEffort` is written on submit; the trigger and the right column both display Default in that case.
+- When there are more than 4 models, a search box appears in the sub-header row below the model column header; it matches model names or provider names.
+- Keyboard: in the model column, ↑/↓/Home/End move, and →/Enter enter the reasoning column; in the reasoning column, ↑/↓ move, and ← returns to the model column; Escape closes; Tab cycles within the panel.
 
-## 性能说明
+## Performance notes
 
-- Client 脚本通过 `dsh.client.immediately` 预取，避免首屏出现原生 chip 再替换的闪烁；脚本体积很小。
-- 模型目录数据由 DSH 基础插件 `ui-model-selection` 的 `ModelDirectoryResolver` 在 client 启动时异步加载一次（原生 `/model` 命令也依赖它）。本插件复用这份共享数据，不重复请求，也不在启动期做额外派生或渲染。
-- 推理档位按需计算（仅当前高亮模型），不预先为目录中的所有模型构建数组。
-- 模型/提供商/查找表只在面板打开后构建；关闭状态下只做一次当前 route 的轻量查找，启动期不会为整份目录建数组。
-- 模型行与档位行固定高度、文本省略，使用 `content-visibility: auto` 跳过屏外绘制，提供商标题吸顶；面板关闭时整棵 DOM 卸载。
-- 搜索只在模型数 > 4 时出现；过滤在面板打开期间进行，不改变触发器的当前选择。
-- 这一版针对数十到数百个模型；如果目录达到上千，后续可把模型列改为窗口化列表。
+- The client script is prefetched through `dsh.client.immediately`, avoiding the flash of the native chip appearing on first paint and then being replaced; the script is very small.
+- Model catalog data is loaded asynchronously once at client startup by the `ModelDirectoryResolver` of the DSH base plugin `ui-model-selection` (the native `/model` command also depends on it). This plugin reuses that shared data, makes no duplicate requests, and does no extra derivation or rendering at startup.
+- Reasoning efforts are computed on demand (only for the currently highlighted model); no arrays are pre-built for all models in the catalog.
+- Model, provider, and lookup tables are built only after the panel opens; while the panel is closed, only one lightweight lookup for the current route is done, and no arrays are built for the whole catalog at startup.
+- Model rows and effort rows have fixed height and ellipsized text, use `content-visibility: auto` to skip off-screen painting, and provider headers are sticky; the whole DOM unmounts when the panel closes.
+- Search appears only when there are more than 4 models; filtering happens while the panel is open and does not change the trigger's current selection.
+- This version targets dozens to hundreds of models; if the catalog reaches thousands, the model column can be changed to a windowed list later.
 
-## 兼容性与限制
+## Compatibility and limitations
 
-- 依赖 DSH `0.2.2-rc.5` 系列（`engines.dsh` 限定 `<0.3.0`）的 `ctx.modelDirectories`、`modelSelection` 与 `agentTeam` 投影接口。
-- 与原生一样，被寻址的子智能体会话不显示模型 seat；列出的子会话不显示团队开关。
-- `/model` 命令仍使用原生弹窗，不作替换；两个入口共享同一份会话选择状态。
-- 本插件以 slot priority `-2` 遮蔽原生 seat。不要同时启用其他同样替换 `conversation.input.model` 的插件（例如 `dsh-2d-model-picker` 使用 `-1`）；同优先级注册会触发 slot 冲突。
-- 遮蔽期间不会渲染原生 `conversation.input.model.options` 子槽，因此其他插件向该子槽添加的行不会显示；团队开关由本插件在原位置重新实现。
-- 搜索阈值与原生一致（模型数 > 4）；过滤仅匹配模型名和提供商名，不做拼音或分词。
-- Client 文案目前提供中文和英文；其他 DSH 界面语言会回退到英文，与宿主界面可能混排。
-- 原生 `conversation.input.model.label` 的第三方装饰子槽不会渲染；模型 badge 以中性样式显示，不使用提供商指定的 tone。
-- 收藏存放在当前 DSH profile 的插件配置里，跨浏览器/客户端共享同一 profile 即可保留；不跨 profile 或跨设备自动同步。
-- 延迟写入意味着在面板关闭前页面若崩溃，最后一次未提交的收藏修改可能丢失；保存失败会在收藏区显示提示，并在下次关闭面板时重试。
-- 若 profile 未挂载 settings 服务，收藏只在当前会话内存中生效，加载/保存失败会在面板内提示。
-- Settings 页面不展示该配置项（Host 侧 `settings.configure({ auto: false })`）；配置仍可通过 DSH settings Remote 读写。
+- Depends on the `ctx.modelDirectories`, `modelSelection`, and `agentTeam` projection interfaces of the DSH `0.2.2-rc.5` series (`engines.dsh` restricted to `<0.3.0`).
+- As with the native behavior, an addressed sub-agent session does not show the model seat; the teamwork toggle is not shown for listed sub-sessions.
+- The `/model` command still uses the native dialog and is not replaced; both entry points share the same session selection state.
+- This plugin shadows the native seat with slot priority `-2`. Do not enable other plugins that also replace `conversation.input.model` at the same time (for example, `dsh-2d-model-picker` uses `-1`); registrations at the same priority trigger a slot conflict.
+- While shadowed, the native `conversation.input.model.options` sub-slot is not rendered, so rows that other plugins add to that sub-slot will not appear; the teamwork toggle is re-implemented in place by this plugin.
+- The search threshold matches the native one (more than 4 models); filtering matches only model names and provider names, with no pinyin or word segmentation.
+- Client copy is currently available in Chinese and English; other DSH UI languages fall back to English and may be mixed with the host interface.
+- Third-party decoration sub-slots of the native `conversation.input.model.label` are not rendered; the model badge is displayed in a neutral style rather than the provider-specified tone.
+- Favorites are stored in the plugin configuration of the current DSH profile and are preserved across browsers and clients that share the same profile; they are not synced automatically across profiles or devices.
+- Deferred writes mean that if the page crashes before the panel closes, the last uncommitted favorite change may be lost; a save failure shows a hint in the favorites area and is retried the next time the panel closes.
+- If the settings service is not mounted in the profile, favorites only take effect in the current session's memory, and load or save failures are reported inside the panel.
+- The Settings page does not show this configuration item (host-side `settings.configure({ auto: false })`); the configuration can still be read and written through the DSH settings Remote.
 
-## 开发
+## Development
 
 ```sh
 pnpm --filter dsh-plugin-fast-model-selector typecheck
@@ -72,4 +74,4 @@ pnpm --filter dsh-plugin-fast-model-selector build
 pnpm check
 ```
 
-`src/client.ts` 是浏览器入口，`src/seat.ts` 是两列选择器组件，`src/theme.ts` 是主题 token 样式，`src/locales.ts` 是 Client 文案。Host 半区 `src/index.ts` 为空。
+`src/client.ts` is the browser entry, `src/seat.ts` is the two-column selector component, `src/theme.ts` is the theme token styles, and `src/locales.ts` is the client copy. The host half, `src/index.ts`, is empty.
