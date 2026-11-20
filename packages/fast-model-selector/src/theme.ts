@@ -166,6 +166,14 @@ export const CSS = `
   overflow-y: hidden;
 }
 
+.fms-favoritesError {
+  margin-top: 4px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 11px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+}
+
 .fms-favoritesEmpty {
   display: flex;
   flex: none;

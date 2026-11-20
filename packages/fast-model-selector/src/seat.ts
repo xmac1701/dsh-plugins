@@ -513,6 +513,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const [activeKey, setActiveKey] = React.useState<string | null>(null)
     const [favorites, setFavorites] = React.useState<readonly Selection[]>([])
     const [favoritesReady, setFavoritesReady] = React.useState<boolean>(false)
+    const [favoriteSaveError, setFavoriteSaveError] = React.useState<string | null>(null)
     const [query, setQuery] = React.useState<string>('')
     const [position, setPosition] = React.useState<PanelPosition | null>(null)
     const [failure, setFailure] = React.useState<string | null>(null)
@@ -539,7 +540,11 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const prefetchedRef = React.useRef<boolean>(false)
     const lastActionRef = React.useRef<'load' | 'select' | 'team'>('load')
     const favoritesLoadRef = React.useRef<boolean>(false)
+    const favoritesRef = React.useRef<readonly Selection[]>(favorites)
+    const favoritesDirtyRef = React.useRef<boolean>(false)
     const favoritesSaveRef = React.useRef<Promise<void>>(Promise.resolve())
+    const flushFavoritesRef = React.useRef<() => void>(() => {})
+    favoritesRef.current = favorites
     const panelId = React.useId()
     const modelListId = `${panelId}-models`
 
@@ -702,7 +707,34 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       })
     }
 
+    const flushFavorites = (): void => {
+      if (!favoritesDirtyRef.current) return
+      const save = props.saveFavorites
+      if (save === undefined) {
+        favoritesDirtyRef.current = false
+        return
+      }
+      const snapshot = favoritesRef.current
+      favoritesDirtyRef.current = false
+      favoritesSaveRef.current = favoritesSaveRef.current.then(async () => {
+        try {
+          const failureText = await save(snapshot)
+          if (failureText !== null) {
+            favoritesDirtyRef.current = true
+            setFavoriteSaveError(t('favorite.saveFailed', { message: failureText }))
+          } else {
+            setFavoriteSaveError(null)
+          }
+        } catch (error) {
+          favoritesDirtyRef.current = true
+          setFavoriteSaveError(t('favorite.saveFailed', { message: messageOf(error) }))
+        }
+      }).catch(() => { /* keep the write queue alive */ })
+    }
+    flushFavoritesRef.current = flushFavorites
+
     const close = (restoreFocus: boolean): void => {
+      flushFavorites()
       resetAim()
       setOpen(false)
       setPosition(null)
@@ -782,17 +814,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
         ? favorites.filter(item => favoriteKey(item) !== key)
         : [...favorites, selection]
       setFavorites(next)
-      const save = props.saveFavorites
-      if (save === undefined) return
-      // Serialize writes so the newest array lands last even on rapid clicks.
-      favoritesSaveRef.current = favoritesSaveRef.current.then(async () => {
-        try {
-          const failureText = await save(next)
-          if (failureText !== null) setFailure(t('favorite.saveFailed', { message: failureText }))
-        } catch (error) {
-          setFailure(t('favorite.saveFailed', { message: messageOf(error) }))
-        }
-      })
+      favoritesRef.current = next
+      favoritesDirtyRef.current = true
     }
 
     const chooseFavorite = (chip: FavoriteChip): void => {
@@ -1209,6 +1232,20 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     }, [])
 
     React.useEffect(() => {
+      const flush = (): void => { flushFavoritesRef.current() }
+      const onVisibilityChange = (): void => {
+        if (document.visibilityState === 'hidden') flush()
+      }
+      window.addEventListener('pagehide', flush)
+      document.addEventListener('visibilitychange', onVisibilityChange)
+      return () => {
+        window.removeEventListener('pagehide', flush)
+        document.removeEventListener('visibilitychange', onVisibilityChange)
+        flush()
+      }
+    }, [])
+
+    React.useEffect(() => {
       if (locked && open) close(false)
     }, [locked, open])
 
@@ -1438,7 +1475,10 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
               'aria-label': t('favorite.removeAria', { name: chip.name }),
               title: t('favorite.removeAria', { name: chip.name }),
               onClick: () => { toggleFavorite(chip.selection) },
-            }, '\u00d7')))))
+            }, '\u00d7')))),
+    favoriteSaveError === null
+      ? null
+      : h('div', { className: 'fms-favoritesError', role: 'alert' }, favoriteSaveError))
 
     const columns = h('div', { className: 'fms-columns' },
       h('section', { className: 'fms-column' },
