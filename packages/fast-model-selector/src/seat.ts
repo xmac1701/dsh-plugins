@@ -780,7 +780,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       const key = favoriteKey(selection)
       const next = favorites.some(item => favoriteKey(item) === key)
         ? favorites.filter(item => favoriteKey(item) !== key)
-        : [selection, ...favorites]
+        : [...favorites, selection]
       setFavorites(next)
       const save = props.saveFavorites
       if (save === undefined) return
@@ -1410,12 +1410,6 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
               }, '\u00d7'))
       : null
 
-    const modelSubheader = h('div', { className: 'fms-subheader' }, searchField)
-    const effortSubheader = h('div', { className: 'fms-subheader' },
-      activeEntry === undefined
-        ? null
-        : h('span', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name))
-
     const favoritesArea = h('div', {
       className: 'fms-favorites',
       role: 'group',
@@ -1449,8 +1443,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const columns = h('div', { className: 'fms-columns' },
       h('section', { className: 'fms-column' },
         h('div', { className: 'fms-columnHeader' },
-          h('span', { className: 'fms-headerTitle' }, t('column.model'))),
-        modelSubheader,
+          h('span', { className: 'fms-headerTitle' }, t('column.model')),
+          searchField),
         h('div', {
           ref: modelBodyRef,
           id: modelListId,
@@ -1464,8 +1458,10 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
         }, modelChildren)),
       h('section', { className: 'fms-column fms-effortColumn' },
         h('div', { className: 'fms-columnHeader' },
-          h('span', { className: 'fms-headerTitle' }, t('column.effort'))),
-        effortSubheader,
+          h('span', { className: 'fms-headerTitle' }, t('column.effort')),
+          activeEntry === undefined
+            ? null
+            : h('span', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name)),
         h('div', {
           ref: effortBodyRef,
           className: 'fms-effortBody',

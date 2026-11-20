@@ -284,30 +284,21 @@ export const CSS = `
   }
 }
 
-.fms-subheader {
-  display: flex;
-  flex: none;
-  align-items: center;
-  box-sizing: border-box;
-  min-width: 0;
-  height: 34px;
-  padding: 3px 8px;
-}
-
 .fms-searchField {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 1 150px;
+  min-width: 60px;
+  margin-left: auto;
 }
 
 .fms-search {
   box-sizing: border-box;
   display: block;
   width: 100%;
-  height: 28px;
-  padding: 0 30px 0 9px;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: var(--dsw-radius-md);
+  height: 26px;
+  padding: 0 24px 0 8px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
   outline: none;
   background: transparent;
   color: var(--dsw-alias-label-primary);
@@ -321,13 +312,13 @@ export const CSS = `
 }
 
 .fms-search:focus {
-  border-color: var(--dsw-alias-state-business-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .fms-searchClear {
   position: absolute;
   top: 50%;
-  right: 8px;
+  right: 2px;
   display: grid;
   place-items: center;
   width: 20px;
@@ -356,7 +347,7 @@ export const CSS = `
 
 .fms-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -378,13 +369,15 @@ export const CSS = `
   display: flex;
   flex: none;
   align-items: center;
+  gap: 12px;
   min-width: 0;
-  height: 32px;
-  padding: 2px 8px;
+  height: 38px;
+  padding: 0 8px;
   box-sizing: border-box;
 }
 
 .fms-headerTitle {
+  flex: none;
   min-width: 0;
   overflow: hidden;
   color: var(--dsw-alias-label-tertiary);
@@ -397,15 +390,22 @@ export const CSS = `
 }
 
 .fms-effortModel {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 60%;
+  margin-left: auto;
+  /* Room for the underline inside the overflow clip box. */
+  padding-bottom: 6px;
+  margin-bottom: -6px;
   overflow: hidden;
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   font-weight: 400;
   line-height: 22px;
+  text-align: right;
   text-overflow: ellipsis;
   text-decoration: underline;
+  text-underline-offset: 4px;
   white-space: nowrap;
 }
 
