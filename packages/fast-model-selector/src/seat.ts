@@ -180,6 +180,13 @@ interface ModelEntry {
   providerName: string
   model: CatalogModel
   badgeText: string | undefined
+  /** Position in the currently visible model order (DOM data-model-index). */
+  index: number
+}
+
+interface Point {
+  x: number
+  y: number
 }
 
 interface GroupView {
@@ -455,6 +462,15 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const searchRef = React.useRef<HTMLInputElement | null>(null)
     const teamRowRef = React.useRef<HTMLButtonElement | null>(null)
     const confirmCancelRef = React.useRef<HTMLButtonElement | null>(null)
+    // Menu-aim state: recent pointer locations, the row under the pointer, the
+    // pending delayed activation, and the latest activation logic. See
+    // https://github.com/kamens/jQuery-menu-aim.
+    const mouseLocsRef = React.useRef<Point[]>([])
+    const aimTimerRef = React.useRef<number | null>(null)
+    const hoveredRowRef = React.useRef<string | null>(null)
+    const lastDelayLocRef = React.useRef<Point | null>(null)
+    const aimActiveKeyRef = React.useRef<string | null>(null)
+    const aimRef = React.useRef<{ possiblyActivate: (key: string) => void }>({ possiblyActivate: () => {} })
     const focusPendingRef = React.useRef<boolean>(false)
     const prefetchedRef = React.useRef<boolean>(false)
     const lastActionRef = React.useRef<'load' | 'select' | 'team'>('load')
@@ -505,6 +521,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
               providerName,
               model,
               badgeText: model.badge === undefined ? undefined : resolveText(model.badge.text),
+              index,
             }
             entries.push(entry)
             const item = { entry, index }
@@ -519,6 +536,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const currentKey = currentInfo === undefined ? null : modelKey(currentInfo.group.id, currentInfo.model.id)
     const currentEntry = currentKey === null ? undefined : view.byKey.get(currentKey)
     const activeEntry = (activeKey === null ? undefined : view.byKey.get(activeKey)) ?? currentEntry ?? view.entries[0]
+    aimActiveKeyRef.current = activeEntry?.key ?? null
     const currentReasoning = currentInfo?.model.reasoning
     const currentEffort = effectiveEffort(currentInfo?.model, current)
     const currentUnavailable = current !== null && currentInfo === undefined
@@ -559,7 +577,22 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       load()
     }
 
+    const clearAimTimer = (): void => {
+      if (aimTimerRef.current !== null) {
+        window.clearTimeout(aimTimerRef.current)
+        aimTimerRef.current = null
+      }
+    }
+
+    const resetAim = (): void => {
+      clearAimTimer()
+      mouseLocsRef.current = []
+      lastDelayLocRef.current = null
+      hoveredRowRef.current = null
+    }
+
     const close = (restoreFocus: boolean): void => {
+      resetAim()
       setOpen(false)
       setPosition(null)
       setQuery('')
@@ -577,6 +610,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     }
 
     const show = (): void => {
+      resetAim()
       setFailure(null)
       setConfirmTeamOff(false)
       setPosition(null)
@@ -658,14 +692,38 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       applyTeam(!teamEnabled)
     }
 
-    const activate = (key: string | null): void => {
-      if (key !== null && key !== activeKey) setActiveKey(key)
+    const activateModel = (key: string, transferFocus: boolean): void => {
+      const entry = view.byKey.get(key)
+      if (entry === undefined) return
+      if (key !== activeKey) setActiveKey(key)
+      if (!transferFocus) return
+      // Changing the active model replaces the effort pane. If keyboard focus
+      // sits on an effort row, that row would unmount, blur to the document,
+      // and close the panel; park focus on the model row first. Other focused
+      // controls remain mounted, so they keep focus.
+      const focused = document.activeElement
+      if (focused instanceof Node && effortBodyRef.current?.contains(focused) === true) {
+        const row = modelBodyRef.current?.querySelector<HTMLElement>(`[data-model-index="${entry.index}"]`)
+        row?.focus({ preventScroll: true })
+      }
+    }
+
+    /** Click/keyboard: activate now and put focus on the chosen model row. */
+    const activateImmediately = (key: string): void => {
+      clearAimTimer()
+      hoveredRowRef.current = key
+      const entry = view.byKey.get(key)
+      if (entry === undefined) return
+      activateModel(key, true)
+      const row = modelBodyRef.current?.querySelector<HTMLElement>(`[data-model-index="${entry.index}"]`)
+      row?.focus({ preventScroll: true })
     }
 
     const focusModel = (index: number): void => {
       const entry = view.entries[index]
       if (entry === undefined) return
-      setActiveKey(entry.key)
+      clearAimTimer()
+      activateModel(entry.key, false)
       const row = modelBodyRef.current?.querySelector<HTMLElement>(`[data-model-index="${index}"]`)
       if (row) {
         row.focus({ preventScroll: true })
@@ -701,24 +759,98 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       }
     }
 
-    const onModelOver = (event: unknown): void => {
-      if (busy) return
-      const index = rowIndexIn(modelBodyRef.current, event, 'data-model-index')
-      if (index === null) return
-      const entry = view.entries[index]
-      if (entry === undefined) return
-      const changing = entry.key !== activeKey
-      activate(entry.key)
-      if (!changing) return
-      // Changing the active model replaces the effort pane. If keyboard focus
-      // sits on an effort row, that row would unmount, blur to the document,
-      // and close the panel; park focus on the hovered model row first. Any
-      // other focused control remains mounted, so it keeps focus.
-      const focused = document.activeElement
-      if (focused instanceof Node && effortBodyRef.current?.contains(focused) === true) {
-        const row = targetElement(event)?.closest<HTMLElement>('[data-model-index]') ?? null
-        row?.focus({ preventScroll: true })
+    /**
+     * Menu-aim activation delay (adapted from jQuery-menu-aim): while the
+     * pointer is moving toward the effort pane, crossing other model rows must
+     * not switch the active model. A delay is returned until the pointer stops
+     * or changes direction, then the hovered row activates.
+     */
+    const activationDelay = (): number => {
+      if (aimActiveKeyRef.current === null) return 0
+      const body = modelBodyRef.current
+      if (body === null) return 0
+      const rect = body.getBoundingClientRect()
+      const tolerance = 75
+      const upperRight: Point = { x: rect.right, y: rect.top - tolerance }
+      const lowerRight: Point = { x: rect.right, y: rect.bottom + tolerance }
+      const locations = mouseLocsRef.current
+      const location = locations[locations.length - 1]
+      if (location === undefined) return 0
+      const previous = locations[0] ?? location
+      // Entering the model list from outside (including from the effort pane)
+      // is an intentional move: activate immediately.
+      if (previous.x < rect.left || previous.x > rect.right
+        || previous.y < rect.top || previous.y > rect.bottom) return 0
+      const lastDelay = lastDelayLocRef.current
+      if (lastDelay !== null && location.x === lastDelay.x && location.y === lastDelay.y) return 0
+      const slope = (from: Point, to: Point): number => (to.y - from.y) / (to.x - from.x)
+      const decreasing = slope(location, upperRight)
+      const increasing = slope(location, lowerRight)
+      const previousDecreasing = slope(previous, upperRight)
+      const previousIncreasing = slope(previous, lowerRight)
+      if (decreasing < previousDecreasing && increasing > previousIncreasing) {
+        // Both right-hand slopes are diverging: the pointer is heading into
+        // the submenu. Re-check after the delay instead of switching.
+        lastDelayLocRef.current = location
+        return 200
       }
+      lastDelayLocRef.current = null
+      return 0
+    }
+
+    const possiblyActivate = (key: string): void => {
+      if (!open) return
+      if (key === aimActiveKeyRef.current) return
+      const delay = activationDelay()
+      if (delay > 0) {
+        aimTimerRef.current = window.setTimeout(() => {
+          aimTimerRef.current = null
+          if (hoveredRowRef.current === key) aimRef.current.possiblyActivate(key)
+        }, delay)
+        return
+      }
+      activateModel(key, true)
+    }
+
+    // The latest activation logic for timers scheduled by an older render.
+    aimRef.current.possiblyActivate = possiblyActivate
+
+    const pushMouseLoc = (x: number, y: number): void => {
+      const locations = mouseLocsRef.current
+      locations.push({ x, y })
+      if (locations.length > 3) locations.shift()
+    }
+
+    const resetHoverAim = (): void => {
+      hoveredRowRef.current = null
+      clearAimTimer()
+    }
+
+    const onPanelMouseLeave = (): void => {
+      resetHoverAim()
+      // Re-entering from outside starts a fresh direction sample.
+      mouseLocsRef.current = []
+    }
+
+    const onPanelMouseMove = (event: unknown): void => {
+      const pointer = event as { clientX?: unknown; clientY?: unknown }
+      if (typeof pointer.clientX !== 'number' || typeof pointer.clientY !== 'number') return
+      pushMouseLoc(pointer.clientX, pointer.clientY)
+      if (busy) {
+        resetHoverAim()
+        return
+      }
+      const index = rowIndexIn(modelBodyRef.current, event, 'data-model-index')
+      const entry = index === null ? undefined : view.entries[index]
+      if (entry === undefined) {
+        resetHoverAim()
+        return
+      }
+      if (entry.key === hoveredRowRef.current) return
+      hoveredRowRef.current = entry.key
+      clearAimTimer()
+      if (entry.key === aimActiveKeyRef.current) return
+      aimRef.current.possiblyActivate(entry.key)
     }
 
     const onModelFocus = (event: unknown): void => {
@@ -726,7 +858,9 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       const index = rowIndexIn(modelBodyRef.current, event, 'data-model-index')
       if (index === null) return
       const entry = view.entries[index]
-      if (entry !== undefined) activate(entry.key)
+      if (entry === undefined) return
+      clearAimTimer()
+      activateModel(entry.key, false)
     }
 
     const onModelClick = (event: unknown): void => {
@@ -734,7 +868,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       const index = rowIndexIn(modelBodyRef.current, event, 'data-model-index')
       if (index === null) return
       const entry = view.entries[index]
-      if (entry !== undefined) activate(entry.key)
+      if (entry !== undefined) activateImmediately(entry.key)
     }
 
     const onSearchChange = (event: unknown): void => {
@@ -929,6 +1063,10 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       return () => { document.removeEventListener('mousedown', onDocumentMouseDown) }
     }, [open])
 
+    React.useEffect(() => () => {
+      if (aimTimerRef.current !== null) window.clearTimeout(aimTimerRef.current)
+    }, [])
+
     React.useEffect(() => {
       if (locked && open) close(false)
     }, [locked, open])
@@ -1119,7 +1257,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
           className: 'fms-modelBody',
           role: 'group',
           'aria-label': t('column.model'),
-          onMouseOver: onModelOver,
+          onMouseLeave: resetHoverAim,
           onFocus: onModelFocus,
           onClick: onModelClick,
           onKeyDown: onModelKeyDown,
@@ -1203,6 +1341,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
         maxHeight: `${position.maxHeight}px`,
       },
       onMouseDown: onPanelMouseDown,
+      onMouseMove: onPanelMouseMove,
+      onMouseLeave: onPanelMouseLeave,
     }, searchRow, columns, failureStrip, footer)
 
     return h('div', {

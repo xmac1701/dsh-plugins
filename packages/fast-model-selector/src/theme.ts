@@ -333,6 +333,12 @@ export const CSS = `
   max-width: 100%;
 }
 
+/* Menu-aim may leave keyboard focus on a row that is no longer the active
+   one; keep that focus visible with the host focus-ring token. */
+.fms-modelOption:focus-visible {
+  box-shadow: inset 0 0 0 1.5px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
 .fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover-accent); }
 
 @media (hover: hover) {
