@@ -129,20 +129,27 @@ export const CSS = `
   pointer-events: none;
 }
 
-.fms-searchRow {
+.fms-subheader {
+  display: flex;
   flex: none;
-  padding: 2px 4px 4px;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: 0;
+  height: 34px;
+  padding: 3px 8px;
 }
 
 .fms-searchField {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .fms-search {
   box-sizing: border-box;
   display: block;
   width: 100%;
-  height: 30px;
+  height: 28px;
   padding: 0 30px 0 9px;
   border: 0.5px solid var(--dsw-alias-border-l2);
   border-radius: var(--dsw-radius-md);
@@ -215,12 +222,10 @@ export const CSS = `
 .fms-columnHeader {
   display: flex;
   flex: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
+  align-items: center;
   min-width: 0;
-  height: 40px;
-  padding: 4px 8px 2px;
+  height: 32px;
+  padding: 2px 8px;
   box-sizing: border-box;
 }
 
@@ -237,14 +242,13 @@ export const CSS = `
 }
 
 .fms-effortModel {
-  flex: none;
+  flex: 1 1 auto;
   min-width: 0;
-  padding: 0 8px 6px;
   overflow: hidden;
   color: var(--dsw-alias-label-primary);
   font-size: 13px;
   font-weight: 400;
-  line-height: 18px;
+  line-height: 22px;
   text-overflow: ellipsis;
   text-decoration: underline;
   text-underline-offset: 4px;

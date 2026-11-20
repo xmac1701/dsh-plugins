@@ -1220,37 +1220,43 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       })
     }
 
-    const searchRow = showSearch
-      ? h('div', { className: 'fms-searchRow' },
-          h('div', { className: 'fms-searchField' },
-            h('input', {
-              ref: searchRef,
-              type: 'text',
-              role: 'searchbox',
-              className: 'fms-search',
-              placeholder: t('search.placeholder'),
-              'aria-label': t('search.placeholder'),
-              'aria-controls': modelListId,
-              value: query,
-              spellCheck: false,
-              autoComplete: 'off',
-              onChange: onSearchChange,
-              onKeyDown: onSearchKeyDown,
-            }),
-            query === ''
-              ? null
-              : h('button', {
-                  type: 'button',
-                  className: 'fms-searchClear',
-                  'aria-label': t('search.clear'),
-                  onClick: () => { clearSearch() },
-                }, '\u00d7')))
+    const searchField = showSearch
+      ? h('div', { className: 'fms-searchField' },
+          h('input', {
+            ref: searchRef,
+            type: 'text',
+            role: 'searchbox',
+            className: 'fms-search',
+            placeholder: t('search.placeholder'),
+            'aria-label': t('search.placeholder'),
+            'aria-controls': modelListId,
+            value: query,
+            spellCheck: false,
+            autoComplete: 'off',
+            onChange: onSearchChange,
+            onKeyDown: onSearchKeyDown,
+          }),
+          query === ''
+            ? null
+            : h('button', {
+                type: 'button',
+                className: 'fms-searchClear',
+                'aria-label': t('search.clear'),
+                onClick: () => { clearSearch() },
+              }, '\u00d7'))
       : null
+
+    const modelSubheader = h('div', { className: 'fms-subheader' }, searchField)
+    const effortSubheader = h('div', { className: 'fms-subheader' },
+      activeEntry === undefined
+        ? null
+        : h('span', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name))
 
     const columns = h('div', { className: 'fms-columns' },
       h('section', { className: 'fms-column' },
         h('div', { className: 'fms-columnHeader' },
           h('span', { className: 'fms-headerTitle' }, t('column.model'))),
+        modelSubheader,
         h('div', {
           ref: modelBodyRef,
           id: modelListId,
@@ -1265,9 +1271,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       h('section', { className: 'fms-column fms-effortColumn' },
         h('div', { className: 'fms-columnHeader' },
           h('span', { className: 'fms-headerTitle' }, t('column.effort'))),
-        activeEntry === undefined
-          ? null
-          : h('div', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name),
+        effortSubheader,
         h('div', {
           ref: effortBodyRef,
           className: 'fms-effortBody',
@@ -1345,7 +1349,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       onMouseDown: onPanelMouseDown,
       onMouseMove: onPanelMouseMove,
       onMouseLeave: onPanelMouseLeave,
-    }, searchRow, columns, failureStrip, footer)
+    }, columns, failureStrip, footer)
 
     return h('div', {
       ref: rootRef,
