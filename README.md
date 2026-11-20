@@ -1,13 +1,13 @@
 # DSH 插件 monorepo
 
-用 pnpm workspace 管理多个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件的模板仓库。每个 `packages/dsh-plugin-*` 都是一个可以单独安装到 DSH profile 的 **bundle**：`package.json` 声明 `dsh.bundle.patch`，补丁把插件行插入 profile 的配置层，TypeScript 源码由 tsup 构建到 `dist/`。
+用 pnpm workspace 管理多个 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件的模板仓库。每个插件包（通常位于 `packages/dsh-plugin-*`）都是一个可以单独安装到 DSH profile 的 **bundle**：`package.json` 声明 `dsh.bundle.patch`，补丁把插件行插入 profile 的配置层，TypeScript 源码由 tsup 构建到 `dist/`。
 
 ## 目录
 
 ```
 .
-├── packages/                    # 插件包（pnpm workspace，初始为空）
-│   └── .gitkeep
+├── packages/                    # 插件包（pnpm workspace）
+│   └── fast-model-selector/     # dsh-plugin-fast-model-selector：两列快速模型选择器
 ├── templates/
 │   ├── host/                    # 只有 Host 半区的模板
 │   └── ui/                      # 带 Web Client 半区的模板

@@ -1,0 +1,5 @@
+# The bundle layer. The Host half is empty by default; the Web UI in
+# src/client.ts replaces the composer model seat with a two-column panel.
+- insert:
+    - id: fast-model-selector
+      name: 'dsh-plugin-fast-model-selector'
