@@ -463,6 +463,7 @@ export const CSS = `
 }
 
 .fms-teamRow {
+  box-sizing: border-box;
   position: relative;
   display: flex;
   align-items: center;
