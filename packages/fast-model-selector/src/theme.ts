@@ -129,6 +129,161 @@ export const CSS = `
   pointer-events: none;
 }
 
+.fms-favorites {
+  flex: none;
+  padding: 5px 8px 6px;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l1);
+}
+
+.fms-favoritesTitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+}
+
+.fms-favoritesStar {
+  display: inline-flex;
+  color: var(--dsw-alias-state-warn-secondary);
+}
+
+.fms-favoritesStar svg {
+  width: 12px;
+  height: 12px;
+}
+
+.fms-favoritesList {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  min-height: 26px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.fms-favoritesEmpty {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.fms-favoriteItem {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.fms-favoriteChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  max-width: 240px;
+  height: 26px;
+  padding: 0 22px 0 8px;
+  overflow: hidden;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-sm);
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .fms-favoriteChip:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.fms-favoriteChip:focus-visible {
+  box-shadow: 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.fms-favoriteChip:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  cursor: default;
+}
+
+.fms-favoriteModel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fms-favoriteEffort {
+  flex: none;
+  color: var(--dsw-alias-label-caption);
+  white-space: nowrap;
+}
+
+.fms-favoriteChip:disabled .fms-favoriteEffort {
+  color: inherit;
+}
+
+.fms-favoriteRemove {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 50%;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-caption);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.fms-favoriteItem:hover .fms-favoriteRemove,
+.fms-favoriteItem:focus-within .fms-favoriteRemove {
+  opacity: 1;
+  visibility: visible;
+}
+
+.fms-favoriteRemove:focus-visible {
+  box-shadow: 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+@media (hover: hover) {
+  .fms-favoriteRemove:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+@media (hover: none) {
+  .fms-favoriteRemove {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
 .fms-subheader {
   display: flex;
   flex: none;
@@ -360,6 +515,71 @@ export const CSS = `
    one; keep that focus visible with the host focus-ring token. */
 .fms-modelOption:focus-visible {
   box-shadow: inset 0 0 0 1.5px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.fms-effortItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fms-effortOption {
+  padding-right: 30px;
+}
+
+/* All stars appear while the reasoning list is hovered (not just the row
+   under the pointer); a filled amber star marks a saved favorite. */
+.fms-star {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 50%;
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-caption);
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 100ms ease, color 100ms ease;
+}
+
+.fms-effortBody:hover .fms-star,
+.fms-effortBody:focus-within .fms-star {
+  opacity: 1;
+  visibility: visible;
+}
+
+.fms-starOn {
+  color: var(--dsw-alias-state-warn-secondary);
+}
+
+.fms-star:focus-visible {
+  box-shadow: 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.fms-star:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+@media (hover: hover) {
+  .fms-star:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+@media (hover: none) {
+  .fms-star {
+    opacity: 1;
+    visibility: visible;
+  }
 }
 
 .fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover); }
@@ -655,6 +875,7 @@ export const CSS = `
 
 @media (prefers-reduced-motion: reduce) {
   .fms-chevron,
+  .fms-star,
   .fms-switch,
   .fms-switchThumb {
     transition: none;

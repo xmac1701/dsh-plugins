@@ -110,6 +110,10 @@ export interface SeatInjected {
   resolveText: (text: unknown) => string
   /** Save the Agent Teams selection; null on success, otherwise the failure text. */
   setTeamEnabled?: (enabled: boolean) => Promise<string | null>
+  /** Read favorites from the DSH settings namespace; absent when settings is unavailable. */
+  loadFavorites?: () => Promise<readonly Selection[]>
+  /** Persist favorites through DSH settings; null on success, otherwise the failure text. */
+  saveFavorites?: (favorites: readonly Selection[]) => Promise<string | null>
 }
 
 /** Localized translate seat. */
@@ -206,6 +210,18 @@ interface CurrentInfo {
   model: CatalogModel
 }
 
+interface FavoriteChip {
+  key: string
+  selection: Selection
+  /** Display name: model · effort. */
+  name: string
+  modelName: string
+  providerName: string
+  effortLabel: string
+  /** Whether the model is present in the current catalog. */
+  available: boolean
+}
+
 const EMPTY_VIEW: ModelView = { groups: [], entries: [], byKey: new Map() }
 
 interface PanelPosition {
@@ -292,6 +308,36 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+/** Stable identity of one complete selection (undefined effort included). */
+function favoriteKey(selection: Selection): string {
+  return JSON.stringify([selection.provider, selection.model, selection.reasoningEffort ?? null])
+}
+
+/** Validate the `favorites` field of the plugin's DSH settings namespace. */
+export function parseFavorites(value: unknown): readonly Selection[] {
+  if (typeof value !== 'object' || value === null) return []
+  const parsed = (value as { favorites?: unknown }).favorites
+  if (!Array.isArray(parsed)) return []
+  const seen = new Set<string>()
+  const favorites: Selection[] = []
+  for (const entry of parsed) {
+    if (typeof entry !== 'object' || entry === null) continue
+    const item = entry as { provider?: unknown; model?: unknown; reasoningEffort?: unknown }
+    if (typeof item.provider !== 'string' || typeof item.model !== 'string') continue
+    if (item.reasoningEffort !== undefined && typeof item.reasoningEffort !== 'string') continue
+    const selection: Selection = {
+      provider: item.provider,
+      model: item.model,
+      ...item.reasoningEffort === undefined ? {} : { reasoningEffort: item.reasoningEffort },
+    }
+    const key = favoriteKey(selection)
+    if (seen.has(key)) continue
+    seen.add(key)
+    favorites.push(selection)
+  }
+  return favorites
+}
+
 /** The element an event targets, or null for non-element targets. */
 function targetElement(event: unknown): Element | null {
   const target = (event as { target?: unknown } | null | undefined)?.target
@@ -376,6 +422,22 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     return h('span', { className: 'fms-spinner', 'aria-hidden': true })
   }
 
+  function StarIcon(props: { filled: boolean }) {
+    return h('svg', {
+      viewBox: '0 0 16 16',
+      width: 14,
+      height: 14,
+      'aria-hidden': true,
+      focusable: 'false',
+    }, h('path', {
+      d: 'M8 1.9l1.86 3.77 4.16.61-3.01 2.94.71 4.14L8 11.4l-3.72 1.95.71-4.14L2 6.28l4.16-.61L8 1.9z',
+      fill: props.filled ? 'currentColor' : 'none',
+      stroke: 'currentColor',
+      'stroke-width': 1.2,
+      'stroke-linejoin': 'round',
+    }))
+  }
+
   const ProviderHeader = React.memo(function ProviderHeader(props: { name: string }) {
     return h('div', { className: 'fms-groupHeader', 'aria-hidden': true }, h('span', null, props.name))
   })
@@ -449,6 +511,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
 
     const [open, setOpen] = React.useState<boolean>(false)
     const [activeKey, setActiveKey] = React.useState<string | null>(null)
+    const [favorites, setFavorites] = React.useState<readonly Selection[]>([])
+    const [favoritesReady, setFavoritesReady] = React.useState<boolean>(false)
     const [query, setQuery] = React.useState<string>('')
     const [position, setPosition] = React.useState<PanelPosition | null>(null)
     const [failure, setFailure] = React.useState<string | null>(null)
@@ -474,6 +538,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
     const focusPendingRef = React.useRef<boolean>(false)
     const prefetchedRef = React.useRef<boolean>(false)
     const lastActionRef = React.useRef<'load' | 'select' | 'team'>('load')
+    const favoritesLoadRef = React.useRef<boolean>(false)
+    const favoritesSaveRef = React.useRef<Promise<void>>(Promise.resolve())
     const panelId = React.useId()
     const modelListId = `${panelId}-models`
 
@@ -484,6 +550,34 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       [state.groups],
     )
     const showSearch = totalModels > 4
+    const favoriteKeys = React.useMemo(() => new Set(favorites.map(favoriteKey)), [favorites])
+    const favoriteChips = React.useMemo<readonly FavoriteChip[]>(() => favorites.map((favorite) => {
+      let group: ProviderGroup | undefined
+      let model: CatalogModel | undefined
+      for (const candidate of state.groups) {
+        if (candidate.id !== favorite.provider) continue
+        group = candidate
+        model = candidate.models.find(entry => entry.id === favorite.model)
+        break
+      }
+      const modelName = model?.name ?? favorite.model
+      const providerName = group === undefined
+        ? favorite.provider
+        : group.id === 'deepseek-account' ? accountName : group.name
+      const effortLabel = favorite.reasoningEffort === undefined
+        ? t('effort.providerDefault')
+        : model?.reasoning?.efforts.find(level => level.id === favorite.reasoningEffort)?.name
+          ?? favorite.reasoningEffort
+      return {
+        key: favoriteKey(favorite),
+        selection: favorite,
+        name: `${modelName} · ${effortLabel}`,
+        modelName,
+        providerName,
+        effortLabel,
+        available: model !== undefined,
+      }
+    }), [favorites, state.groups, accountName, t])
 
     // The trigger only needs the current route. Scan for it without building
     // the full per-model entry table, so a large catalog costs nothing while
@@ -591,6 +685,23 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       hoveredRowRef.current = null
     }
 
+    const ensureFavoritesLoaded = (): void => {
+      if (favoritesLoadRef.current) return
+      favoritesLoadRef.current = true
+      const loader = props.loadFavorites
+      if (loader === undefined) {
+        setFavoritesReady(true)
+        return
+      }
+      void loader().then((loaded) => {
+        setFavorites(loaded)
+        setFavoritesReady(true)
+      }, (error: unknown) => {
+        setFavoritesReady(true)
+        setFailure(t('favorite.loadFailed', { message: messageOf(error) }))
+      })
+    }
+
     const close = (restoreFocus: boolean): void => {
       resetAim()
       setOpen(false)
@@ -619,6 +730,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       focusPendingRef.current = true
       setOpen(true)
       lastActionRef.current = 'load'
+      ensureFavoritesLoaded()
       load()
     }
 
@@ -661,6 +773,35 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
         model: activeEntry.model.id,
         ...choice.effort === undefined ? {} : { reasoningEffort: choice.effort },
       })
+    }
+
+    const toggleFavorite = (selection: Selection): void => {
+      if (!favoritesReady) return
+      const key = favoriteKey(selection)
+      const next = favorites.some(item => favoriteKey(item) === key)
+        ? favorites.filter(item => favoriteKey(item) !== key)
+        : [selection, ...favorites]
+      setFavorites(next)
+      const save = props.saveFavorites
+      if (save === undefined) return
+      // Serialize writes so the newest array lands last even on rapid clicks.
+      favoritesSaveRef.current = favoritesSaveRef.current.then(async () => {
+        try {
+          const failureText = await save(next)
+          if (failureText !== null) setFailure(t('favorite.saveFailed', { message: failureText }))
+        } catch (error) {
+          setFailure(t('favorite.saveFailed', { message: messageOf(error) }))
+        }
+      })
+    }
+
+    const chooseFavorite = (chip: FavoriteChip): void => {
+      if (!chip.available || busy || locked) return
+      if (state.current !== null && favoriteKey(state.current) === chip.key) {
+        close(true)
+        return
+      }
+      submit(chip.selection)
     }
 
     const applyTeam = (enabled: boolean): void => {
@@ -1198,8 +1339,22 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       activeEfforts.forEach((choice, index) => {
         const selected = activeIsCurrent && choice.effort === activeEffort
         const rowPending = busy && pendingIsActive && choice.effort === pendingEffort
-        effortChildren.push(h('button', {
+        const selection: Selection = {
+          provider: activeEntry.groupId,
+          model: activeEntry.model.id,
+          ...choice.effort === undefined ? {} : { reasoningEffort: choice.effort },
+        }
+        const favorite = favoriteKeys.has(favoriteKey(selection))
+        const rowName = `${activeEntry.model.name} · ${choice.label}`
+        const favoriteLabel = favorite
+          ? t('favorite.removeAria', { name: rowName })
+          : t('favorite.addAria', { name: rowName })
+        effortChildren.push(h('div', {
           key: choice.key,
+          className: 'fms-effortItem',
+          role: 'presentation',
+        },
+        h('button', {
           type: 'button',
           role: 'option',
           'aria-selected': selected,
@@ -1216,7 +1371,16 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
           onClick: () => { chooseEffort(choice) },
         },
         h('span', { className: 'fms-check', 'aria-hidden': true }, rowPending ? h(Spinner) : selected ? h(CheckIcon) : null),
-        h('span', { className: 'fms-name' }, choice.label)))
+        h('span', { className: 'fms-name' }, choice.label)),
+        h('button', {
+          type: 'button',
+          className: classes('fms-star', favorite && 'fms-starOn'),
+          'aria-pressed': favorite,
+          'aria-label': favoriteLabel,
+          title: favoriteLabel,
+          disabled: busy || !favoritesReady,
+          onClick: () => { toggleFavorite(selection) },
+        }, h(StarIcon, { filled: favorite }))))
       })
     }
 
@@ -1251,6 +1415,36 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       activeEntry === undefined
         ? null
         : h('span', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name))
+
+    const favoritesArea = h('div', {
+      className: 'fms-favorites',
+      role: 'group',
+      'aria-label': t('favorites.regionAria'),
+    },
+    h('div', { className: 'fms-favoritesTitle' },
+      h('span', { className: 'fms-favoritesStar' }, h(StarIcon, { filled: true })),
+      h('span', null, t('favorites.title'))),
+    h('div', { className: 'fms-favoritesList' },
+      favorites.length === 0
+        ? h('div', { className: 'fms-favoritesEmpty' }, t('favorites.emptyHint'))
+        : favoriteChips.map(chip => h('div', { className: 'fms-favoriteItem', key: chip.key },
+            h('button', {
+              type: 'button',
+              className: 'fms-favoriteChip',
+              disabled: !chip.available || busy,
+              title: chip.available ? chip.name : `${chip.name} · ${t('favorite.unavailable')}`,
+              'aria-label': chip.available ? chip.name : `${chip.name} · ${t('favorite.unavailable')}`,
+              onClick: () => { chooseFavorite(chip) },
+            },
+            h('span', { className: 'fms-favoriteModel' }, chip.modelName),
+            h('span', { className: 'fms-favoriteEffort' }, chip.effortLabel)),
+            h('button', {
+              type: 'button',
+              className: 'fms-favoriteRemove',
+              'aria-label': t('favorite.removeAria', { name: chip.name }),
+              title: t('favorite.removeAria', { name: chip.name }),
+              onClick: () => { toggleFavorite(chip.selection) },
+            }, '\u00d7')))))
 
     const columns = h('div', { className: 'fms-columns' },
       h('section', { className: 'fms-column' },
@@ -1349,7 +1543,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       onMouseDown: onPanelMouseDown,
       onMouseMove: onPanelMouseMove,
       onMouseLeave: onPanelMouseLeave,
-    }, columns, failureStrip, footer)
+    }, favoritesArea, columns, failureStrip, footer)
 
     return h('div', {
       ref: rootRef,

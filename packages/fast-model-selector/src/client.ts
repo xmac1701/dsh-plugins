@@ -4,7 +4,7 @@
  * the shared per-session ModelDirectory, so switches made here, through the
  * /model command, or by a settings/catalog refresh all stay in sync.
  */
-import { createSeat, type ModelDirectoryState, type ReactDOMLike, type ReactLike, type RemoteResult, type SeatInjected, type Selection, type SnapshotStore } from './seat'
+import { createSeat, parseFavorites, type ModelDirectoryState, type ReactDOMLike, type ReactLike, type RemoteResult, type SeatInjected, type Selection, type SnapshotStore } from './seat'
 import { en, NS, zh } from './locales'
 import { CSS } from './theme'
 
@@ -12,6 +12,8 @@ const PLUGIN_ID = 'dsh-plugin-fast-model-selector'
 const STYLE_ID = `${PLUGIN_ID}/theme.css`
 /** Native seat registers at the default priority 0; a lower priority shadows it. */
 const SEAT_PRIORITY = -2
+/** Settings namespace = the Host bundle row id in cordis.patch.yml. */
+const FAVORITES_NAMESPACE = 'fast-model-selector'
 
 interface ClientModuleFace {
   inject?: string[]
@@ -62,8 +64,28 @@ interface TeamRemoteFace {
   setEnabled(sessionId: string, enabled: boolean): Promise<RemoteResult<void>>
 }
 
+interface SettingsNamespaceViewLike {
+  ns: string
+  revision: number
+  value: unknown
+}
+
+interface SettingsDescribeValueLike {
+  namespaces: readonly SettingsNamespaceViewLike[]
+}
+
+interface SettingsRemoteFace {
+  describe(): Promise<RemoteResult<SettingsDescribeValueLike>>
+  update(
+    ns: string,
+    patch: Record<string, unknown>,
+    expectedRevision: number | undefined,
+  ): Promise<RemoteResult<unknown>>
+}
+
 interface RemoteFace {
   agentTeams?: TeamRemoteFace
+  settings?: SettingsRemoteFace
 }
 
 interface ClientContext {
@@ -112,6 +134,16 @@ moduleLoader?.load({
           teamRemote = teamScope.remote.agentTeams
         })
 
+        let settingsRemote: SettingsRemoteFace | undefined
+        try {
+          settingsRemote = scope.get('remote.settings') as SettingsRemoteFace | undefined
+        } catch {
+          settingsRemote = undefined
+        }
+        scope.inject(['remote.settings'], (settingsScope) => {
+          settingsRemote = settingsScope.remote.settings
+        })
+
         scope.slots.inject('conversation.input.model', () => scope.slots.register({
           name: 'conversation.input.model',
           priority: SEAT_PRIORITY,
@@ -132,6 +164,36 @@ moduleLoader?.load({
               const team = teamRemote
               face.setTeamEnabled = enabled => team.setEnabled(sessionId, enabled)
                 .then(result => result.ok ? null : result.error.message)
+            }
+            face.loadFavorites = async () => {
+              const remote = settingsRemote
+              if (remote === undefined) throw new Error('DSH settings is unavailable')
+              const described = await remote.describe()
+              if (!described.ok) {
+                throw new Error(`${described.error.code}: ${described.error.message}`)
+              }
+              const namespace = described.value.namespaces.find(view => view.ns === FAVORITES_NAMESPACE)
+              if (namespace === undefined) throw new Error('favorites settings namespace is unavailable')
+              return parseFavorites(namespace.value)
+            }
+            face.saveFavorites = async (favorites) => {
+              const remote = settingsRemote
+              if (remote === undefined) return 'settings unavailable'
+              for (let attempt = 0; attempt < 2; attempt += 1) {
+                const described = await remote.describe()
+                if (!described.ok) return `${described.error.code}: ${described.error.message}`
+                const namespace = described.value.namespaces.find(view => view.ns === FAVORITES_NAMESPACE)
+                if (namespace === undefined) return 'settings namespace unavailable'
+                const written = await remote.update(
+                  FAVORITES_NAMESPACE,
+                  { favorites: [...favorites] },
+                  namespace.revision,
+                )
+                if (written.ok) return null
+                if (written.error.code === 'settings/conflict' && attempt === 0) continue
+                return `${written.error.code}: ${written.error.message}`
+              }
+              return 'settings conflict'
             }
             return face
           },

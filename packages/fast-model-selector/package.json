@@ -25,6 +25,9 @@
     "dev": "tsup --watch",
     "typecheck": "tsc -p tsconfig.json"
   },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "catalog:"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.1.0"
   },
