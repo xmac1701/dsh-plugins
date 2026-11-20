@@ -230,7 +230,7 @@ export const CSS = `
 
 .fms-favoriteEffort {
   flex: none;
-  color: var(--dsw-alias-label-caption);
+  color: var(--dsw-alias-label-secondary);
   white-space: nowrap;
 }
 
@@ -406,7 +406,6 @@ export const CSS = `
   line-height: 22px;
   text-overflow: ellipsis;
   text-decoration: underline;
-  text-underline-offset: 4px;
   white-space: nowrap;
 }
 
@@ -423,6 +422,7 @@ export const CSS = `
    so the rail doubles as the divider between the two columns. */
 .fms-modelBody {
   overflow-y: scroll;
+  padding-top: 0;
 }
 
 .fms-modelBody::-webkit-scrollbar-track {
@@ -456,8 +456,10 @@ export const CSS = `
   box-sizing: border-box;
   height: 28px;
   padding: 6px 8px 2px;
-  background: var(--dsw-specific-menu, var(--dsw-alias-bg-base));
-  backdrop-filter: var(--dsw-menu-backdrop-filter, none);
+  /* Layer the translucent menu fill over an opaque base so the sticky header
+     never lets scrolled rows show through (Firefox ignores backdrop-filter). */
+  background-color: var(--dsw-alias-bg-base);
+  background-image: linear-gradient(var(--dsw-specific-menu), var(--dsw-specific-menu));
   color: var(--dsw-alias-label-tertiary);
   font-size: 11px;
   font-weight: 500;
@@ -558,6 +560,8 @@ export const CSS = `
 
 .fms-starOn {
   color: var(--dsw-alias-state-warn-secondary);
+  opacity: 1;
+  visibility: visible;
 }
 
 .fms-star:focus-visible {

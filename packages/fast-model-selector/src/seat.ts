@@ -1422,8 +1422,8 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
       'aria-label': t('favorites.regionAria'),
     },
     h('div', { className: 'fms-favoritesTitle' },
-      h('span', { className: 'fms-favoritesStar' }, h(StarIcon, { filled: true })),
-      h('span', null, t('favorites.title'))),
+      h('span', null, t('favorites.title')),
+      h('span', { className: 'fms-favoritesStar' }, h(StarIcon, { filled: true }))),
     h('div', { className: 'fms-favoritesList' },
       favorites.length === 0
         ? h('div', { className: 'fms-favoritesEmpty' }, t('favorites.emptyHint'))
@@ -1437,7 +1437,7 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
               onClick: () => { chooseFavorite(chip) },
             },
             h('span', { className: 'fms-favoriteModel' }, chip.modelName),
-            h('span', { className: 'fms-favoriteEffort' }, chip.effortLabel)),
+            h('span', { className: 'fms-favoriteEffort' }, ' · ' + chip.effortLabel)),
             h('button', {
               type: 'button',
               className: 'fms-favoriteRemove',
