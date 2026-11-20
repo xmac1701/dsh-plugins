@@ -130,13 +130,17 @@ export const CSS = `
 }
 
 .fms-searchRow {
-  position: relative;
   flex: none;
   padding: 2px 4px 4px;
 }
 
+.fms-searchField {
+  position: relative;
+}
+
 .fms-search {
   box-sizing: border-box;
+  display: block;
   width: 100%;
   height: 30px;
   padding: 0 30px 0 9px;
@@ -329,11 +333,11 @@ export const CSS = `
   max-width: 100%;
 }
 
-.fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover-solid); }
+.fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover-accent); }
 
 @media (hover: hover) {
   .fms-effortOption:hover:not(:disabled) {
-    background: var(--dsw-alias-interactive-bg-hover-solid);
+    background: var(--dsw-alias-interactive-bg-hover-accent);
   }
 }
 
@@ -459,6 +463,7 @@ export const CSS = `
 }
 
 .fms-teamRow {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -466,67 +471,86 @@ export const CSS = `
   width: 100%;
   min-height: 34px;
   padding: 0 8px;
-  border: none;
   border-radius: var(--dsw-radius-md);
-  outline: none;
-  background: transparent;
   color: var(--dsw-alias-label-primary);
-  font-family: inherit;
   font-size: 13px;
   line-height: 20px;
-  text-align: left;
-  cursor: pointer;
 }
 
-.fms-teamRow:focus-visible { background: var(--dsw-alias-interactive-bg-hover); }
+.fms-teamRow:has(.fms-switch:focus-visible) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
 
 @media (hover: hover) {
-  .fms-teamRow:hover:not(:disabled) {
+  .fms-teamRow:has(.fms-switch:not(:disabled)):hover {
     background: var(--dsw-alias-interactive-bg-hover);
   }
 }
 
-.fms-teamRow:disabled {
-  color: var(--dsw-alias-label-dimmed);
-  cursor: default;
-}
-
 .fms-teamLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* DSH Switch primitive dimensions/colors: the button is the track, and its
+   ::after extends the hit target over the whole row (ui-primitives Switch +
+   TeamModeToggle). static positioning lets ::after resolve against the row. */
 .fms-switch {
-  position: relative;
-  display: inline-flex;
+  box-sizing: border-box;
+  position: static;
   flex: 0 0 auto;
-  align-items: center;
-  width: 32px;
-  height: 18px;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  border: 0;
   border-radius: 999px;
+  corner-shape: round;
   background: var(--dsw-alias-border-l3);
-  transition: background 120ms ease;
+  cursor: pointer;
 }
 
-.fms-switchOn {
-  background: var(--dsw-alias-state-business-primary);
+.fms-switch[aria-checked='true'] {
+  background: var(--dsw-alias-brand-primary);
+}
+
+.fms-switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.fms-switch:focus-visible {
+  outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+  outline-offset: 2px;
+}
+
+.fms-switch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--dsw-radius-md);
 }
 
 .fms-switchThumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
+  display: block;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
+  corner-shape: round;
   background: var(--dsw-alias-label-primary-foreground, #ffffff);
-  transition: transform 120ms ease;
+  transition: transform 0.12s ease;
 }
 
-.fms-switchOn .fms-switchThumb {
-  transform: translateX(14px);
+.fms-switch[aria-checked='false'] .fms-switchThumb {
+  background: var(--dsw-alias-switch-thumb);
+}
+
+.fms-switch[aria-checked='true'] .fms-switchThumb {
+  transform: translateX(16px);
 }
 
 .fms-confirm {

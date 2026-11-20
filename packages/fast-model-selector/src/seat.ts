@@ -1084,28 +1084,29 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
 
     const searchRow = showSearch
       ? h('div', { className: 'fms-searchRow' },
-          h('input', {
-            ref: searchRef,
-            type: 'text',
-            role: 'searchbox',
-            className: 'fms-search',
-            placeholder: t('search.placeholder'),
-            'aria-label': t('search.placeholder'),
-            'aria-controls': modelListId,
-            value: query,
-            spellCheck: false,
-            autoComplete: 'off',
-            onChange: onSearchChange,
-            onKeyDown: onSearchKeyDown,
-          }),
-          query === ''
-            ? null
-            : h('button', {
-                type: 'button',
-                className: 'fms-searchClear',
-                'aria-label': t('search.clear'),
-                onClick: () => { clearSearch() },
-              }, '\u00d7'))
+          h('div', { className: 'fms-searchField' },
+            h('input', {
+              ref: searchRef,
+              type: 'text',
+              role: 'searchbox',
+              className: 'fms-search',
+              placeholder: t('search.placeholder'),
+              'aria-label': t('search.placeholder'),
+              'aria-controls': modelListId,
+              value: query,
+              spellCheck: false,
+              autoComplete: 'off',
+              onChange: onSearchChange,
+              onKeyDown: onSearchKeyDown,
+            }),
+            query === ''
+              ? null
+              : h('button', {
+                  type: 'button',
+                  className: 'fms-searchClear',
+                  'aria-label': t('search.clear'),
+                  onClick: () => { clearSearch() },
+                }, '\u00d7')))
       : null
 
     const columns = h('div', { className: 'fms-columns' },
@@ -1169,20 +1170,20 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
           onClick: () => { applyTeam(false) },
         }, t('team.confirm'))))
 
-    const teamRow = h('button', {
-      ref: teamRowRef,
-      type: 'button',
-      role: 'switch',
-      'aria-checked': teamEnabled,
-      'aria-busy': teamPending || undefined,
-      className: 'fms-teamRow',
-      title: t('team.description'),
-      disabled: locked || busy || teamPending,
-      onClick: toggleTeam,
-    },
-    h('span', { className: 'fms-teamLabel' }, t('team.label')),
-    h('span', { className: classes('fms-switch', teamEnabled && 'fms-switchOn'), 'aria-hidden': true },
-      h('span', { className: 'fms-switchThumb' })))
+    const teamRow = h('div', { className: 'fms-teamRow' },
+      h('span', { className: 'fms-teamLabel' }, t('team.label')),
+      h('button', {
+        ref: teamRowRef,
+        type: 'button',
+        role: 'switch',
+        'aria-checked': teamEnabled,
+        'aria-busy': teamPending || undefined,
+        'aria-label': t('team.label'),
+        className: 'fms-switch',
+        title: t('team.description'),
+        disabled: locked || busy || teamPending,
+        onClick: toggleTeam,
+      }, h('span', { className: 'fms-switchThumb' })))
 
     const footer = teamAvailable
       ? h('div', { className: 'fms-footer' }, teamRow, confirmTeamOff ? confirmBlock : null)
