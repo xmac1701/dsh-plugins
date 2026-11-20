@@ -294,9 +294,13 @@ export const CSS = `
 
 .fms-searchField {
   position: relative;
-  flex: 0 1 150px;
-  min-width: 60px;
+  flex: 0 0 64px;
+  min-width: 64px;
   margin-left: auto;
+}
+
+.fms-searchField:focus-within {
+  flex-grow: 1;
 }
 
 .fms-search {
