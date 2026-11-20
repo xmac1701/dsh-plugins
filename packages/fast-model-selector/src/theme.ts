@@ -236,13 +236,18 @@ export const CSS = `
   white-space: nowrap;
 }
 
-.fms-headerModel {
+.fms-effortModel {
+  flex: none;
   min-width: 0;
+  padding: 0 8px 6px;
   overflow: hidden;
-  color: var(--dsw-alias-label-caption);
-  font-size: 11px;
-  line-height: 14px;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
   text-overflow: ellipsis;
+  text-decoration: underline;
+  text-underline-offset: 4px;
   white-space: nowrap;
 }
 

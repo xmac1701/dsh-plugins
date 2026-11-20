@@ -1264,8 +1264,10 @@ export function createSeat(React: ReactLike, ReactDOM: ReactDOMLike): (props: Se
         }, modelChildren)),
       h('section', { className: 'fms-column fms-effortColumn' },
         h('div', { className: 'fms-columnHeader' },
-          h('span', { className: 'fms-headerTitle' }, t('column.effort')),
-          h('span', { className: 'fms-headerModel', title: activeEntry?.model.name }, activeEntry?.model.name ?? '')),
+          h('span', { className: 'fms-headerTitle' }, t('column.effort'))),
+        activeEntry === undefined
+          ? null
+          : h('div', { className: 'fms-effortModel', title: activeEntry.model.name }, activeEntry.model.name),
         h('div', {
           ref: effortBodyRef,
           className: 'fms-effortBody',
