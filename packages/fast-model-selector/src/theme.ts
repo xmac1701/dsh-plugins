@@ -209,9 +209,7 @@ export const CSS = `
 }
 
 .fms-effortColumn {
-  margin-left: 4px;
-  padding-left: 4px;
-  border-left: 0.5px solid var(--dsw-alias-border-l2);
+  /* The model list's always-visible scrollbar is the column divider. */
 }
 
 .fms-columnHeader {
@@ -255,13 +253,29 @@ export const CSS = `
   padding: 2px;
   overflow-x: hidden;
   overflow-y: auto;
-  border-radius: var(--dsw-radius-md);
 }
 
-/* The reasoning list shares the highlighted model row's fill: the two blocks
-   read as one selection surface. */
-.fms-effortBody {
-  background: var(--dsw-alias-interactive-bg-hover);
+/* The model list keeps its scrollbar rail visible even when the catalog fits,
+   so the rail doubles as the divider between the two columns. */
+.fms-modelBody {
+  overflow-y: scroll;
+}
+
+.fms-modelBody::-webkit-scrollbar-track {
+  background: linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% - 1px),
+    var(--dsw-alias-border-l2) calc(100% - 1px),
+    var(--dsw-alias-border-l2) 100%
+  );
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  /* Firefox has no stylable track; keep the divider on the column instead. */
+  .fms-modelBody {
+    border-right: 1px solid var(--dsw-alias-border-l2);
+  }
 }
 
 .fms-group {
@@ -339,11 +353,11 @@ export const CSS = `
   box-shadow: inset 0 0 0 1.5px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
 }
 
-.fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover-accent); }
+.fms-effortOption:focus-visible { background: var(--dsw-alias-interactive-bg-hover); }
 
 @media (hover: hover) {
   .fms-effortOption:hover:not(:disabled) {
-    background: var(--dsw-alias-interactive-bg-hover-accent);
+    background: var(--dsw-alias-interactive-bg-hover);
   }
 }
 
